@@ -48,8 +48,11 @@
       .sortline{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--dim);flex-wrap:wrap}
       select{border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);padding:.25rem .625rem;font-size:.875rem;color:var(--text)}
       .countline{margin-top:1rem;font-size:.8125rem;color:var(--dim)}
-      .tablewrap{margin-top:.75rem;overflow-x:auto;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface)}
-      table{width:100%;border-collapse:collapse;font-size:.875rem;min-width:56rem}
+      .tablewrap{margin-top:.75rem;overflow-x:auto;overflow-y:hidden;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--dim) transparent}
+      .tablewrap::-webkit-scrollbar{height:.5rem}
+      .tablewrap::-webkit-scrollbar-thumb{background:var(--dim);border-radius:999px}
+      .tablewrap::-webkit-scrollbar-track{background:transparent}
+      table{width:100%;border-collapse:collapse;font-size:.875rem;min-width:80rem}
       thead tr{border-bottom:2px solid var(--text);text-align:left}
       th{padding:.625rem .75rem;white-space:nowrap;font-weight:600}
       th.num,td.num{text-align:right}
@@ -93,7 +96,7 @@
       .modal .meta{font-size:.8125rem;color:var(--dim);margin-top:.25rem}
       .closebtn{position:absolute;top:.75rem;right:.75rem;border-radius:999px;border:1px solid var(--border);background:var(--surface);width:2.25rem;height:2.25rem;font-size:1rem;line-height:1}
       .modalwrap{position:relative}
-      .htable{width:100%;border-collapse:collapse;font-size:.8125rem;margin-top:.75rem;min-width:0}
+      .htable{width:max-content;min-width:100%;border-collapse:collapse;font-size:.8125rem;margin-top:.75rem}
       .htable th,.htable td{padding:.375rem .5rem;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap}
       .htable th:first-child,.htable td:first-child{text-align:left}
       .hscroll{overflow-x:auto}
@@ -120,6 +123,8 @@
           <button type="button" class="modebtn" data-mode="da" aria-pressed="true">NSW · HSC 成功率排名</button>
           <button type="button" class="modebtn" data-mode="hscavg" aria-pressed="false">NSW · HSC 平均分排名</button>
           <button type="button" class="modebtn" data-mode="top9995" aria-pressed="false">NSW · 99.95 人数排名</button>
+          <button type="button" class="modebtn" data-mode="pct95" aria-pressed="false">NSW · 95+ 比例排名</button>
+          <button type="button" class="modebtn" data-mode="pct90" aria-pressed="false">NSW · 90+ 比例排名</button>
         </div>
         <p class="mode-note" id="mode-note" hidden></p>
       </div>
@@ -183,6 +188,16 @@
         part.sort(function(a,b){ return (b.c95-a.c95)||((b.sr||-1)-(a.sr||-1))||((b.med||-1)-(a.med||-1))||a.n.localeCompare(b.n); });
         part.forEach(function(r,i){ map[r.n]= i+1; });
         rows.forEach(function(r){ if(!(r.n in map)) map[r.n]=null; });
+      } else if(mode==='pct95'){
+        var part95 = rows.filter(function(r){ return r.p95!=null; });
+        part95.sort(function(a,b){ return (b.p95-a.p95)||((b.sr||-1)-(a.sr||-1))||a.n.localeCompare(b.n); });
+        part95.forEach(function(r,i){ map[r.n]= i+1; });
+        rows.forEach(function(r){ if(!(r.n in map)) map[r.n]=null; });
+      } else if(mode==='pct90'){
+        var part90 = rows.filter(function(r){ return r.p90!=null; });
+        part90.sort(function(a,b){ return (b.p90-a.p90)||((b.sr||-1)-(a.sr||-1))||a.n.localeCompare(b.n); });
+        part90.forEach(function(r,i){ map[r.n]= i+1; });
+        rows.forEach(function(r){ if(!(r.n in map)) map[r.n]=null; });
       } else if(mode==='hscavg'){
         var part3 = rows.filter(function(r){ return r.avg!=null; });
         part3.sort(function(a,b){ return (b.avg-a.avg)||((b.sr||-1)-(a.sr||-1))||a.n.localeCompare(b.n); });
@@ -239,6 +254,8 @@
     function rankLabel(){
       if(state.mode==='hscavg') return '平均分排名';
       if(state.mode==='top9995') return '99.95 排名';
+      if(state.mode==='pct95') return '95+ 排名';
+      if(state.mode==='pct90') return '90+ 排名';
       return '排名';
     }
     function render(){
@@ -256,6 +273,8 @@
       var noteText = '';
       if(state.mode==='hscavg') noteText = 'HSC 平均分 = 把一所学校当年各门 HSC 课程的平均分再取平均（满分 100），是《悉尼先驱晨报》（SMH）近几年采用的口径，看的是全年级的平均水平，而不是只看 Band 6 尖子生的比例——所以名次会和成功率排名不同（例如 2025 年成功率第 2 的 James Ruse，按平均分排第 1，平均分 91.3）。原始数据来自公立学校年报（SPaRO）：只有公立与精英学校公布各科平均分，天主教与独立学校大多不公布，它们的平均分显示「—」、不参与此排名；已公布的学校按平均分从高到低排名，未公布的排在后面。本快照尚未收录逐校平均分数据，下方先按成功率列出学校。';
       if(state.mode==='top9995') noteText = '99.95 人数排名 = 在 NSW 前 100 所学校里，按当年取得 ATAR 99.95（最高分）的学生人数从多到少排名；人数相同时依次比成功率、ATAR 中位数。99.95 人数来自公开汇编名单（2025 年全州共 53 人获 99.95），只有汇编里点到名的学校才有这个数字——没有公布人数的学校不参与此排名，名次与人数显示为「—」，不按 0 人处理。';
+      if(state.mode==='pct95') noteText = '95+ 比例排名 = 在 NSW 前 100 所学校里，按当年取得 ATAR 95 及以上学生所占比例从高到低排名；比例相同时按成功率排。95+ 比例是学校官网公布的数据，只有公布了的学校才参与此排名——没有公布的学校名次显示为「—」，排在最后。';
+      if(state.mode==='pct90') noteText = '90+ 比例排名 = 在 NSW 前 100 所学校里，按当年取得 ATAR 90 及以上学生所占比例从高到低排名；比例相同时按成功率排。90+ 比例是学校官网公布的数据，只有公布了的学校才参与此排名——没有公布的学校名次显示为「—」，排在最后。';
       note.hidden = !noteText; note.textContent = noteText;
 
       var res = currentRows();
@@ -298,8 +317,8 @@
           + midCells(r)
           + '<td class="num">'+(r.c95!=null&&r.c95>0? '<span class="c95badge">'+r.c95+'</span>': num(r.c95))+'</td>'
           + '<td class="num">'+pct(r.p99)+'</td>'
-          + '<td class="num">'+pct(r.p95)+'</td>'
-          + '<td class="num">'+pct(r.p90)+'</td>'
+          + '<td class="num'+(state.mode==='pct95'?' strong-accent':'')+'">'+pct(r.p95)+'</td>'
+          + '<td class="num'+(state.mode==='pct90'?' strong-accent':'')+'">'+pct(r.p90)+'</td>'
           + '<td class="num">'+med(r.med)+'</td>'
           + '<td class="num">'+(r.top!=null? '<span class="c95badge">'+r.top.toFixed(2)+'</span>': '—')+'</td>'
           + '<td class="num">'+num(r.all)+'</td>'
@@ -314,6 +333,8 @@
         var metaLine = esc(SECTOR_LABEL[r.sec]||r.sec)+(r.sub? ' · '+esc(r.sub):'');
         if(state.mode==='hscavg') metaLine += ' · HSC 平均分 <b style="color:var(--accent)">'+(r.avg==null?'—':r.avg.toFixed(1))+'</b> · 成功率 '+pct(r.sr)+' · DA '+num(r.da);
         else if(state.mode==='top9995') metaLine += ' · 99.95 人数 <b style="color:var(--accent)">'+num(r.c95)+'</b> · 成功率 '+pct(r.sr)+' · DA '+num(r.da)+' / 考试 '+num(r.ex)+' 科次';
+        else if(state.mode==='pct95') metaLine += ' · 95+ 比例 <b style="color:var(--accent)">'+pct(r.p95)+'</b> · 成功率 '+pct(r.sr)+' · DA '+num(r.da)+' / 考试 '+num(r.ex)+' 科次';
+        else if(state.mode==='pct90') metaLine += ' · 90+ 比例 <b style="color:var(--accent)">'+pct(r.p90)+'</b> · 成功率 '+pct(r.sr)+' · DA '+num(r.da)+' / 考试 '+num(r.ex)+' 科次';
         else metaLine += ' · 成功率 '+pct(r.sr)+' · DA '+num(r.da)+' / 考试 '+num(r.ex)+' 科次';
         if(state.mode!=='da' && r.rk!=null) metaLine += ' · DA 排名第 '+r.rk+' 名';
         var firstCell = state.mode==='hscavg'
@@ -321,8 +342,8 @@
           : '<span><span class="lab">成功率</span><span class="val">'+pct(r.sr)+'</span></span><span><span class="lab">99.95 人数</span><span class="val" style="color:'+(state.mode==='top9995'?'var(--accent)':'var(--gold)')+'">'+num(r.c95)+'</span></span>';
         var grid = '<span class="cardgrid g5">'+firstCell
           + '<span><span class="lab">99+ 比例</span><span class="val">'+pct(r.p99)+'</span></span>'
-          + '<span><span class="lab">95+ 比例</span><span class="val">'+pct(r.p95)+'</span></span>'
-          + '<span><span class="lab">90+ 比例</span><span class="val">'+pct(r.p90)+'</span></span></span>';
+          + '<span><span class="lab">95+ 比例</span><span class="val"'+(state.mode==='pct95'?' style="color:var(--accent)"':'')+'>'+pct(r.p95)+'</span></span>'
+          + '<span><span class="lab">90+ 比例</span><span class="val"'+(state.mode==='pct90'?' style="color:var(--accent)"':'')+'>'+pct(r.p90)+'</span></span></span>';
         var offLine = '';
         if(r.top!=null || r.all!=null || r.das!=null){
           offLine = '<span class="cardoff">学校官网公布：'
