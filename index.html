@@ -146,6 +146,8 @@
             <option value="pct90plus">90+ 比例</option>
             <option value="medianAtar">ATAR 中位数</option>
             <option value="hscAverage">HSC 平均分</option>
+            <option value="topAtar">最高 ATAR</option>
+            <option value="allRound">All-Round</option>
             <option value="students">考生人数</option>
             <option value="name">学校名称</option>
           </select>
@@ -172,7 +174,7 @@
       {k:'catholic',label:'Catholic'},{k:'independent',label:'Independent'}
     ];
     var SECTOR_LABEL = {government:'Government 公立',selective:'Selective 精英',catholic:'Catholic 天主教',independent:'Independent 独立'};
-    var SORT_DEFAULT = {rank:'asc',successRate:'desc',count9995:'desc',pct99plus:'desc',pct95plus:'desc',pct90plus:'desc',medianAtar:'desc',hscAverage:'desc',students:'desc',name:'asc'};
+    var SORT_DEFAULT = {rank:'asc',successRate:'desc',count9995:'desc',pct99plus:'desc',pct95plus:'desc',pct90plus:'desc',medianAtar:'desc',hscAverage:'desc',topAtar:'desc',allRound:'desc',students:'desc',name:'asc'};
     var state = {year:2025, mode:'da', search:'', sector:'all', sortKey:'rank', sortDir:'asc'};
 
     function rowsFor(year){ return DATA[String(year)] || []; }
@@ -217,6 +219,8 @@
       if(key==='pct90plus') return r.p90;
       if(key==='medianAtar') return r.med;
       if(key==='hscAverage') return r.avg;
+      if(key==='topAtar') return r.top;
+      if(key==='allRound') return r.all;
       if(key==='students') return r.stu;
       return null;
     }
@@ -241,8 +245,7 @@
       return {rows:rows, dmap:dmap, pmap:pmap};
     }
     function rankLabel(){
-      if(state.mode==='median') return 'ATAR 中位数排名';
-      return '排名';
+      return '序号';
     }
     function render(){
       // year buttons pressed state
@@ -269,14 +272,8 @@
       var host = document.getElementById('results');
       if(rows.length===0){ host.innerHTML=''; return; }
 
-      var midHead = '', midCells = function(r){ return ''; };
-      if(state.mode==='median'){
-        midHead = '<th class="num"><button type="button" data-sort="medianAtar">ATAR 中位数</button></th><th class="num"><button type="button" data-sort="hscAverage">HSC 平均分</button></th><th class="num"><button type="button" data-sort="successRate">成功率</button></th><th class="num">DA 数</th>';
-        midCells = function(r){ return '<td class="num strong-accent">'+med(r.med)+'</td><td class="num">'+avgf(r.avg)+'</td><td class="num" style="font-weight:500">'+pct(r.sr)+'</td><td class="num">'+num(r.da)+'</td>'; };
-      } else {
-        midHead = '<th class="num"><button type="button" data-sort="successRate">成功率</button></th><th class="num">DA 数</th><th class="num">考试总科次</th>';
-        midCells = function(r){ return '<td class="num" style="font-weight:500">'+pct(r.sr)+'</td><td class="num">'+num(r.da)+'</td><td class="num">'+num(r.ex)+'</td>'; };
-      }
+      var midHead = '<th class="num"><button type="button" data-sort="medianAtar">ATAR 中位数</button></th><th class="num"><button type="button" data-sort="hscAverage">HSC 平均分</button></th><th class="num"><button type="button" data-sort="successRate">成功率</button></th><th class="num">DA 数</th><th class="num">考试总科次</th>';
+      var midCells = function(r){ return '<td class="num strong-accent">'+med(r.med)+'</td><td class="num">'+avgf(r.avg)+'</td><td class="num" style="font-weight:500">'+pct(r.sr)+'</td><td class="num">'+num(r.da)+'</td><td class="num">'+num(r.ex)+'</td>'; };
       var thead = '<thead><tr>'
         + '<th><button type="button" data-sort="rank">'+rankLabel()+(state.sortKey==='rank'?(state.sortDir==='asc'?' ↑':' ↓'):'')+'</button></th>'
         + '<th><button type="button" data-sort="name">学校'+(state.sortKey==='name'?(state.sortDir==='asc'?' ↑':' ↓'):'')+'</button></th>'
@@ -285,18 +282,17 @@
         + '<th class="num"><button type="button" data-sort="pct99plus">99+ 比例</button></th>'
         + '<th class="num"><button type="button" data-sort="pct95plus">95+ 比例</button></th>'
         + '<th class="num"><button type="button" data-sort="pct90plus">90+ 比例</button></th>'
-        + (state.mode==='median' ? '' : '<th class="num"><button type="button" data-sort="medianAtar">ATAR 中位数</button></th><th class="num"><button type="button" data-sort="hscAverage">HSC 平均分</button></th>')
-        + '<th class="num">最高 ATAR</th>'
-        + '<th class="num">All-Round</th>'
+        + '<th class="num"><button type="button" data-sort="topAtar">最高 ATAR</button></th>'
+        + '<th class="num"><button type="button" data-sort="allRound">All-Round</button></th>'
         + '</tr></thead>';
       var tbody = '<tbody class="tnum">';
-      rows.forEach(function(r){
+      rows.forEach(function(r, i){
         var dr = dmap[r.n];
         var sub = r.sub? esc(r.sub)+(r.pc? ' NSW '+esc(r.pc):'') : '';
         var daNote = '';
-        if(state.mode!=='da' && r.rk!=null) daNote = '<span class="ssub">DA 排名第 '+r.rk+' 名</span>';
+        if(state.mode!=='da' && state.mode!=='median' && r.rk!=null) daNote = '<span class="ssub">DA 排名第 '+r.rk+' 名</span>';
         tbody += '<tr data-name="'+esc(r.n)+'">'
-          + '<td><span class="rank'+(dr!=null&&dr<=3?' top':'')+'">'+(dr==null?'—':dr)+'</span>'+deltaHtml(dr, pmap[r.n])+daNote+'</td>'
+          + '<td><span class="rank'+(i<3?' top':'')+'">'+(i+1)+'</span>'+daNote+'</td>'
           + '<td><span class="sname">'+esc(r.n)+'</span>'+(sub?'<span class="ssub">'+sub+'</span>':'')+(r.src?'<a class="srclink" data-src href="'+esc(r.src)+'" target="_blank" rel="noreferrer">官网数据来源 ↗</a>':'')+'</td>'
           + '<td style="white-space:nowrap">'+esc(SECTOR_LABEL[r.sec]||r.sec)+'</td>'
           + midCells(r)
@@ -304,7 +300,6 @@
           + '<td class="num">'+pct(r.p99)+'</td>'
           + '<td class="num">'+pct(r.p95)+'</td>'
           + '<td class="num">'+pct(r.p90)+'</td>'
-          + (state.mode==='median' ? '' : '<td class="num">'+med(r.med)+'</td><td class="num">'+avgf(r.avg)+'</td>')
           + '<td class="num">'+(r.top!=null? '<span class="c95badge">'+r.top.toFixed(2)+'</span>': '—')+'</td>'
           + '<td class="num">'+num(r.all)+'</td>'
           + '</tr>';
@@ -315,7 +310,7 @@
         + '<div class="tablewrap"><table>'+thead+tbody+'</table></div>';
 
       var cards = '<ul class="cards">';
-      rows.forEach(function(r){
+      rows.forEach(function(r, i){
         var dr = dmap[r.n];
         var metaLine = esc(SECTOR_LABEL[r.sec]||r.sec)+(r.sub? ' · '+esc(r.sub):'');
         if(state.mode==='median') metaLine += ' · ATAR 中位数 <b style="color:var(--accent)">'+med(r.med)+'</b> · 成功率 '+pct(r.sr)+' · DA '+num(r.da);
@@ -337,9 +332,9 @@
             + (r.src? '（点开详情看来源链接）':'') + '</span>';
         }
         cards += '<li><button type="button" class="card" data-name="'+esc(r.n)+'" aria-label="查看 '+esc(r.n)+' 历年详情">'
-          + '<span class="cardhead"><span class="cardrank'+(dr!=null&&dr<=3?' top':'')+'">'+(dr==null?'—':dr)+'</span>'
+          + '<span class="cardhead"><span class="cardrank'+(i<3?' top':'')+'">'+(i+1)+'</span>'
           + '<span class="cardname">'+esc(r.n)+'</span></span>'
-          + '<span class="cardmeta">'+metaLine+deltaHtml(dr, pmap[r.n])+'</span>'
+          + '<span class="cardmeta">'+metaLine+'</span>'
           + grid + offLine + '</button></li>';
       });
       cards += '</ul>';
